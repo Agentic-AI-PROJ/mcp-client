@@ -10,9 +10,9 @@ import { McpServer, McpTool } from "./db/models";
 global.EventSource = EventSource as any;
 
 export type ServerConfig =
-    | { type: "sse"; url: string; headers?: Record<string, string> }
-    | { type: "http"; url: string; headers?: Record<string, string> }
-    | { type: "stdio"; command: string; args: string[]; env?: Record<string, string> };
+    | { type: "sse"; url: string; headers?: Record<string, string>; name?: string }
+    | { type: "http"; url: string; headers?: Record<string, string>; name?: string }
+    | { type: "stdio"; command: string; args: string[]; env?: Record<string, string>; name?: string };
 
 export interface ConnectedClient {
     client: Client;
@@ -27,6 +27,7 @@ export class ClientManager {
     constructor(private authHandler?: (url: string) => Promise<string | null>) { }
 
     private getConfigKey(config: ServerConfig): string {
+        if (config.name) return config.name;
         if (config.type === "sse") return `sse:${config.url}`;
         if (config.type === "http") return `http:${config.url}`;
         if (config.type === "stdio") return `stdio:${config.command} ${config.args.join(" ")}`;
@@ -282,6 +283,74 @@ export class ClientManager {
             if (tool) return tool;
         }
         return null;
+    }
+
+    async testServer(key: string): Promise<{ success: boolean; message: string; tools?: any[] }> {
+        try {
+            const server = await McpServer.findOne({ key });
+            if (!server) {
+                return { success: false, message: `Server ${key} not found` };
+            }
+
+            const config = server.toObject() as any;
+            delete config._id;
+            delete config.__v;
+            delete config.isActive;
+            delete config.addedAt;
+
+            console.log(`Testing connection to ${key}...`);
+
+            // Creates a temporary client/transport just like connect() but doesn't save it to active clients
+            let transport: Transport;
+            if (config.type === "sse") {
+                transport = new SSEClientTransport(new URL(config.url), {
+                    eventSourceInit: {
+                        headers: config.headers,
+                    } as any
+                });
+            } else if (config.type === "http") {
+                transport = new StreamableHTTPClientTransport(new URL(config.url), {
+                    requestInit: {
+                        headers: config.headers,
+                    }
+                });
+            } else {
+                transport = new StdioClientTransport({
+                    command: config.command,
+                    args: config.args,
+                    env: config.env ? { ...process.env as Record<string, string>, ...config.env } : undefined,
+                });
+            }
+
+            const client = new Client(
+                {
+                    name: "mcp-client-test",
+                    version: "1.0.0",
+                },
+                {
+                    capabilities: {},
+                }
+            );
+
+            await client.connect(transport);
+            const toolsResult = await client.listTools();
+
+            // Clean up
+            await client.close();
+
+            return {
+                success: true,
+                message: `Successfully connected to ${key}. Found ${toolsResult.tools.length} tools.`,
+                tools: toolsResult.tools
+            };
+
+        } catch (error: any) {
+            console.error(`Test failed for ${key}:`, error);
+            return {
+                success: false,
+                message: `Connection failed: ${error.message || error}`
+            };
+        }
     }
 
     // --- Admin Methods ---
