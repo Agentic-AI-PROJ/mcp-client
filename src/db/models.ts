@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const mcpServerSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true }, // Unique identifier (e.g. "http:..." or "stdio:...")
+    name: { type: String, required: false }, // Display name
     url: { type: String, required: false }, // For SSE/HTTP
     command: { type: String, required: false }, // For Stdio
     args: { type: [String], required: false }, // For Stdio

@@ -30,6 +30,10 @@ const startServer = async () => {
             try {
                 const config: ServerConfig = req.body;
 
+                if (config.name) {
+                    console.log(`Registering named server: ${config.name}`);
+                }
+
                 // Validate config
                 if (!config.type) {
                     return res.status(400).json({ error: "Missing 'type' field" });
@@ -207,6 +211,16 @@ const startServer = async () => {
 
                 const updated = await manager.updateServer(key, updates);
                 res.json({ success: true, server: updated });
+            } catch (error: any) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+
+        app.post("/admin/servers/:key/test", async (req: Request, res: Response) => {
+            try {
+                const key = decodeURIComponent(req.params.key);
+                const result = await manager.testServer(key);
+                res.json(result);
             } catch (error: any) {
                 res.status(500).json({ error: error.message });
             }
