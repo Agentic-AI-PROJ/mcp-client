@@ -10,9 +10,9 @@ import { McpServer, McpTool } from "./db/models";
 global.EventSource = EventSource as any;
 
 export type ServerConfig =
-    | { type: "sse"; url: string; headers?: Record<string, string> }
-    | { type: "http"; url: string; headers?: Record<string, string> }
-    | { type: "stdio"; command: string; args: string[]; env?: Record<string, string> };
+    | { type: "sse"; url: string; headers?: Record<string, string>; name?: string }
+    | { type: "http"; url: string; headers?: Record<string, string>; name?: string }
+    | { type: "stdio"; command: string; args: string[]; env?: Record<string, string>; name?: string };
 
 export interface ConnectedClient {
     client: Client;
@@ -34,6 +34,7 @@ export class ClientManager {
     }
 
     async connect(config: ServerConfig, save: boolean = false) {
+        console.log("Connecting with config:", JSON.stringify(config));
         const key = this.getConfigKey(config);
         if (this.clients.has(key)) {
             console.log(`Already connected to ${key}`);
@@ -247,7 +248,7 @@ export class ClientManager {
                 name: t.name,
                 description: t.description || "No description",
                 inputSchema: t.inputSchema || {},
-                server: t.server ? t.server.key : "unknown"
+                server: t.server ? (t.server.name || t.server.key) : "unknown"
             }));
         } catch (error) {
             console.error("Error listing tools from MongoDB:", error);
@@ -303,7 +304,7 @@ export class ClientManager {
                 name: t.name,
                 description: t.description || "No description",
                 inputSchema: t.inputSchema || {},
-                server: t.server ? t.server.key : "unknown",
+                server: t.server ? (t.server.name || t.server.key) : "unknown",
                 server_id: t.server ? t.server._id : null,
                 isActive: t.isActive
             }));
