@@ -65,11 +65,11 @@ const startServer = async () => {
         // DELETE /servers - Unregister a server
         app.delete("/servers", async (req: Request, res: Response) => {
             try {
-                const { url, command } = req.body;
-                const identifier = url || command;
+                const { url, command, key } = req.body;
+                const identifier = key || url || command;
 
                 if (!identifier) {
-                    return res.status(400).json({ error: "Missing 'url' or 'command' field" });
+                    return res.status(400).json({ error: "Missing 'key', 'url' or 'command' field" });
                 }
 
                 const removed = await manager.removeServer(identifier);
