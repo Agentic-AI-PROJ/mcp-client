@@ -8,7 +8,6 @@ const mcpServerSchema = new mongoose.Schema({
     args: { type: [String], required: false }, // For Stdio
     env: { type: Map, of: String, required: false }, // For Stdio
     type: { type: String, required: true, enum: ["sse", "http", "stdio"] },
-    name: { type: String, required: false },
     logo: { type: String, required: false },
     isActive: { type: Boolean, default: true },
     addedAt: { type: Date, default: Date.now }
